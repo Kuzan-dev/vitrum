@@ -100,6 +100,24 @@ gs() {
   user_dbus gsettings "$@"
 }
 
+# Escribe org.gnome.shell enabled-extensions garantizando el orden:
+# Blur my Shell siempre la última extensión activa. Debe cargar después de Dash to Dock
+# (cuyo dock desenfoca) y de Waywallen (cuyo fondo desenfoca) para evitar condiciones
+# de carrera (grano HDR al abrir la vista general).
+set_enabled_extensions() { # <lista_python_repr>
+  local list="$1"
+  list="$(python3 -I -c '
+import ast, sys
+s = sys.argv[1].strip()
+c = [] if s.startswith("@as") else ast.literal_eval(s)
+b = "blur-my-shell@aunetx"
+if b in c:
+    c = [u for u in c if u != b] + [b]
+print(repr(c))
+' "$list")"
+  gs set org.gnome.shell enabled-extensions "$list"
+}
+
 # Copia un archivo si su contenido cambia
 inst_file() { # origen destino(absoluto) modo
   LAST_CHANGED=0
@@ -219,13 +237,14 @@ PY
 
 
   # Activar: las extensiones de EXTENSIONS, conservando las que ya estuvieran activas (Waywallen,
-  # AppIndicator…: antes este paso reescribía la lista y las desactivaba)
+  # AppIndicator…: antes este paso reescribía la lista y las desactivaba).
+  # Blur my Shell siempre la última (garantizado por set_enabled_extensions).
   local cur list
   cur="$(gs get org.gnome.shell enabled-extensions)"
   # (y sin background-logo, el logo de Fedora sobre el fondo, activo por defecto en usuarios nuevos)
   list="$(python3 -I -c 'import ast,sys; s=sys.argv[1].strip(); c=[] if s.startswith("@as") else ast.literal_eval(s); c=[u for u in c if u != "background-logo@fedorahosted.org"]; c+=[u for u in sys.argv[2:] if u not in c]; print(repr(c))' "$cur" "${uuids[@]}")"
   gs set org.gnome.shell disable-user-extensions false
-  gs set org.gnome.shell enabled-extensions "$list"
+  set_enabled_extensions "$list"
 
   # Dash to Dock: ajustes de config/visual/dash-to-dock.conf (esquema de la propia extensión)
   step_dock
@@ -350,7 +369,7 @@ cur = [] if s.startswith("@as") else ast.literal_eval(s)
 print(repr([u for u in cur if u not in sys.argv[2:]]))
 PY
 )"
-  gs set org.gnome.shell enabled-extensions "$new"
+  set_enabled_extensions "$new"
 
   # 2. Ajustes que dejaron en dconf
   user_dbus dconf reset -f /org/gnome/shell/extensions/widgets-distro-com/
@@ -426,7 +445,7 @@ if sys.argv[2] not in cur:
 print(repr(cur))
 PY
 )"
-  gs set org.gnome.shell enabled-extensions "$new"
+  set_enabled_extensions "$new"
   # User Themes no relee el CSS si el nombre no cambia: vaciarlo y volver a ponerlo lo recarga en vivo.
   # Solo con la sesión desbloqueada: bloqueada, GNOME desactiva User Themes (no declara el modo
   # unlock-dialog) y su v79 deja un manejador colgado que da JS ERROR al cambiar el nombre.
@@ -502,7 +521,7 @@ step_appindicator() {
 
   cur="$(gs get org.gnome.shell enabled-extensions)"
   new="$(python3 -I -c 'import ast,sys; s=sys.argv[1].strip(); c=[] if s.startswith("@as") else ast.literal_eval(s); c+=[sys.argv[2]] if sys.argv[2] not in c else []; print(repr(c))' "$cur" "$uuid")"
-  gs set org.gnome.shell enabled-extensions "$new"
+  set_enabled_extensions "$new"
 
   # Ajustes: 16 px (iconos simbólicos de la barra de 28 px), a la derecha junto al estado, compacto;
   # bandeja antigua (XEmbed) activada para apps viejas
@@ -614,7 +633,7 @@ step_waywallen() {
   local cur new
   cur="$(gs get org.gnome.shell enabled-extensions)"
   new="$(python3 -I -c 'import ast,sys; s=sys.argv[1].strip(); c=[] if s.startswith("@as") else ast.literal_eval(s); c+=[sys.argv[2]] if sys.argv[2] not in c else []; print(repr(c))' "$cur" "$uuid")"
-  gs set org.gnome.shell enabled-extensions "$new"
+  set_enabled_extensions "$new"
 
   # 4. Plugin open-wallpaper-engine (zip fijado por sha256): solo con WW_OWE=1
   local plugdir=".var/app/$app/data/waywallen/plugins/$WAYWALLEN_OWE_ID"
@@ -762,7 +781,7 @@ step_waywallen_remove() {
   local app="$WAYWALLEN_FLATPAK_APP" uuid="$WAYWALLEN_GNOME_UUID" cur new
   cur="$(gs get org.gnome.shell enabled-extensions)"
   new="$(python3 -I -c 'import ast,sys; s=sys.argv[1].strip(); c=[] if s.startswith("@as") else ast.literal_eval(s); print(repr([u for u in c if u!=sys.argv[2]]))' "$cur" "$uuid")"
-  gs set org.gnome.shell enabled-extensions "$new"
+  set_enabled_extensions "$new"
   pkill -u "$TARGET" -f 'waywallen' || true
   rm -f "$UHOME/.config/autostart/waywallen.desktop"
   rm -rf "$UHOME/.local/share/gnome-shell/extensions/$uuid"
