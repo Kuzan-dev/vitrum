@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Regenera el menú de snapshots de grub-btrfs de forma atómica.
+# Se instala en /usr/local/sbin/grub-btrfs-regen.
+#
+#   grub-btrfs-regen          solo el submenú (grub-btrfs.cfg)
+#   grub-btrfs-regen --full   también grub.cfg (grub2-mkconfig)
+#
+# grub-btrfs (41_snapshots-btrfs) y grub2-mkconfig sobrescriben sus archivos en sitio
+# ("cat new > cfg"). Este script los genera en un directorio temporal del MISMO sistema
+# de archivos (/boot), los valida con grub2-script-check y solo entonces los coloca con
+# "mv" (rename atómico). Si algo falla, los archivos reales no se tocan.
+set -euo pipefail
+
+[[ $EUID -eq 0 ]] || { echo "Ejecuta con sudo" >&2; exit 1; }
+
+GRUB_DIR=/boot/grub2
+CFG="$GRUB_DIR/grub.cfg"
+BACKUP="$GRUB_DIR/grub.cfg.pre-grub-btrfs"
+TMP="$GRUB_DIR/.grub-btrfs-tmp"
+
+full=false
+[[ "${1:-}" == "--full" ]] && full=true
+# Si grub.cfg aún no incluye el submenú, hace falta una regeneración completa
+grep -q 'snapshots-btrfs' "$CFG" || full=true
+
+rm -rf "$TMP"; mkdir -m 0700 "$TMP"
+trap 'rm -rf "$TMP"' EXIT
+
+# 41_snapshots-btrfs escribe grub-btrfs.cfg en GRUB_BTRFS_GBTRFS_DIRNAME
+export GRUB_BTRFS_GBTRFS_DIRNAME="$TMP"
+if $full; then
+  grub2-mkconfig -o "$TMP/grub.cfg"
+  grub2-script-check "$TMP/grub.cfg"
+else
+  /etc/grub.d/41_snapshots-btrfs >/dev/null
+fi
+[[ -s "$TMP/grub-btrfs.cfg" ]] || { echo "grub-btrfs.cfg no generado" >&2; exit 1; }
+grub2-script-check "$TMP/grub-btrfs.cfg"
+
+# Colocar: primero el submenú (grub.cfg lo referencia), después grub.cfg
+chmod 0600 "$TMP/grub-btrfs.cfg"
+mv -f "$TMP/grub-btrfs.cfg" "$GRUB_DIR/grub-btrfs.cfg"
+if $full; then
+  [[ -e "$BACKUP" ]] || cp -a "$CFG" "$BACKUP"   # copia original, solo la primera vez
+  chmod 0600 "$TMP/grub.cfg"
+  mv -f "$TMP/grub.cfg" "$CFG"
+fi
+restorecon "$GRUB_DIR/grub-btrfs.cfg" "$CFG" 2>/dev/null || true
+echo "OK: $GRUB_DIR/grub-btrfs.cfg$($full && echo " y $CFG") actualizados"

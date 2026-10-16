@@ -1,0 +1,8 @@
+
+/* ---------- Bandeja (AppIndicator), variante «dentro» ---------- */
+/* Los iconos de apps en segundo plano se integran en el grupo de estado: sin fondo propio en reposo,
+   el mismo hover y radio que las demás cápsulas, y menos relleno lateral para que queden juntos. */
+#panel #panelRight .panel-button.appindicator-icon {
+  -natural-hpadding: @SPACE_S@;
+  -minimum-hpadding: @SPACE_XS@;
+}

@@ -1,0 +1,11 @@
+# Literales que el escaneo genérico confunde con datos personales (uno por línea). Los valores de
+# config/local.env nunca se pueden permitir aquí. Los UUID de extensiones de pins.env se permiten solos.
+# Dirección fija con la que una VM de qemu (red de usuario) ve al anfitrión
+10.0.2.2
+# Extensión de Fedora (logo sobre el fondo) que la capa de usuario desactiva
+background-logo@fedorahosted.org
+# Extensiones antiguas que el paso «cleanup» de visual.sh desactiva y borra
+widgets@distro.com
+orbit@unmade.space
+# Correo noreply de GitHub del autor del proyecto (el único que puede figurar en commits y archivos)
+116390770+Kuzan-dev@users.noreply.github.com

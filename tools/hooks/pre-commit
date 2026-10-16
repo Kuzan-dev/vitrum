@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Bloquea el commit si las líneas añadidas contienen valores de config/local.env (PARTUUID, series de los
+# monitores, usuarios, correos, IP local, literales secretos) o patrones de secretos. Activar con:
+#   git config core.hooksPath tools/hooks
+exec python3 -I "$(git rev-parse --show-toplevel)/tools/escanear-datos.py" --staged

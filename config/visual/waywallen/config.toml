@@ -1,0 +1,31 @@
+# Configuración inicial del daemon de Waywallen (la copia scripts/visual.sh <usuario> waywallen).
+# El daemon reescribe este archivo al cambiar algo desde su interfaz.
+[global]
+plugin_update_notifications = false
+hide_tray_icon = false
+
+# Pausa automática: ventana maximizada o a pantalla completa en ese monitor, y GameMode (juegos)
+[global.auto_replay]
+maximized = "pause"
+fullscreen = "pause"
+gamemode = "pause"
+
+[plugin.waywallen-video]
+fps = "30"
+hwdec = "auto"
+
+[plugin.waywallen-image]
+fps = "1"
+
+# open-wallpaper-engine: fondos web (CEF). En NVIDIA la textura compartida falla → desactivada.
+# Sin audio por defecto (se puede activar en la interfaz).
+[plugin.weweb-renderer]
+shared_texture_enabled = "false"
+fps = "30"
+enable_audio = "false"
+remote_debugging_port = "0"
+
+# open-wallpaper-engine: escenas (Vulkan)
+[plugin.wescene-renderer]
+fps = "30"
+enable_audio = "false"

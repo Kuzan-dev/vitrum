@@ -1,0 +1,3 @@
+# Bandeja de iconos (AppIndicator) en la barra. Una de: dentro (recomendada) | propia
+# Para cambiar: editar esta línea y ejecutar  sudo ~/dotfiles/scripts/visual.sh <usuario> shell-theme
+dentro

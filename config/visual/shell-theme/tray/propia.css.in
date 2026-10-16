@@ -1,0 +1,20 @@
+
+/* ---------- Bandeja (AppIndicator), variante «propia» ---------- */
+/* Cápsula propia a la izquierda del estado: fondo sutil continuo (cada icono sin borde lateral, así
+   los fondos se tocan y se leen como una sola cápsula segmentada). Hover y activo como las demás. */
+#panel #panelRight .panel-button.appindicator-icon {
+  background-color: @TRAY_CAPSULE_BG@;
+  border-left-width: 0;
+  border-right-width: 0;
+  -natural-hpadding: @SPACE_S@;
+  -minimum-hpadding: @SPACE_XS@;
+}
+
+#panel #panelRight .panel-button.appindicator-icon:hover {
+  background-color: @CAPSULE_BG_HOVER@;
+}
+
+#panel #panelRight .panel-button.appindicator-icon:active,
+#panel #panelRight .panel-button.appindicator-icon:checked {
+  background-color: @CAPSULE_BG_ACTIVE@;
+}

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Regeneración automática del submenú de grub-btrfs, lanzada por grub-btrfs-regen.path
+# cuando cambia /.snapshots. Se instala en /usr/local/sbin/grub-btrfs-regen-auto.
+#
+# 1. Debounce: espera a que el listado de /.snapshots no cambie durante QUIET segundos
+#    (máximo MAX_WAIT). En una transacción corta de dnf, pre y post caen en la misma espera.
+# 2. Solo regenera si cambian los snapshots que aparecen en el menú (todos menos "post",
+#    que grub-btrfs ignora por GRUB_BTRFS_IGNORE_SNAPSHOT_TYPE). En una transacción
+#    larga, el "post" llega después de regenerar por el "pre" y no provoca otra regeneración.
+# 3. Si /.snapshots cambia mientras regenera, repite (systemd fusiona los eventos que
+#    llegan con el servicio ya en marcha).
+set -euo pipefail
+
+SNAPDIR=/.snapshots
+STATE=/run/grub-btrfs-regen.state   # en /run: tras reiniciar, la primera vez regenera
+QUIET="${QUIET:-15}"
+MAX_WAIT="${MAX_WAIT:-900}"
+
+listing() { ls -1 "$SNAPDIR" 2>/dev/null | sort; }
+
+# Firma de los snapshots visibles en el menú: "número:tipo", sin los "post"
+signature() {
+  local d n t
+  for d in "$SNAPDIR"/*/; do
+    n="$(basename "$d")"
+    [[ "$n" =~ ^[0-9]+$ ]] || continue
+    t="$(sed -n 's:.*<type>\(.*\)</type>.*:\1:p' "$d/info.xml" 2>/dev/null || true)"
+    [[ "$t" == post ]] && continue
+    echo "$n:${t:-?}"
+  done | sort -n
+}
+
+# 1. Debounce
+waited=0
+prev="$(listing)"
+while :; do
+  sleep "$QUIET"
+  waited=$((waited + QUIET))
+  cur="$(listing)"
+  [[ "$cur" == "$prev" ]] && break
+  prev="$cur"
+  if (( waited >= MAX_WAIT )); then
+    echo "Debounce: /.snapshots sigue cambiando tras ${MAX_WAIT}s, se regenera igualmente"
+    break
+  fi
+done
+
+# 2 y 3. Regenerar si cambió el contenido del menú; repetir si hubo cambios entretanto
+while :; do
+  sig="$(signature)"
+  if [[ -f "$STATE" && "$(cat "$STATE")" == "$sig" ]]; then
+    echo "Sin cambios en los snapshots del menú (solo pre/single): no se regenera"
+  else
+    /usr/local/sbin/grub-btrfs-regen
+    printf '%s\n' "$sig" > "$STATE"
+  fi
+  [[ "$(signature)" == "$sig" ]] && break
+  echo "Cambios en /.snapshots durante la regeneración: se repite"
+done

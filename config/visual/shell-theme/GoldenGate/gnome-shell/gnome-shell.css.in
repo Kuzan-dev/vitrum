@@ -1,0 +1,152 @@
+/* GoldenGate — tema del shell para GNOME 50 (fase 3, paso 1).
+ *
+ * PLANTILLA: los marcadores entre arrobas salen de config/visual/shell-theme/tokens.env y los
+ * sustituye scripts/visual.sh (paso shell-theme). No editar el CSS instalado: editar aquí o
+ * en tokens.env y reinstalar.
+ *
+ * Base: hoja oficial de GNOME Shell 50 (modo oscuro), importada sin cambios; aquí solo van
+ * las diferencias de diseño. PIEZA A REVISAR EN CADA VERSIÓN MAYOR DE GNOME (selectores y
+ * ruta del recurso): docs/capas.md.
+ *
+ * Tokens:
+ *   SURFACE        @SURFACE@
+ *   BORDER         @BORDER@
+ *   SHADOW         @SHADOW@
+ *   CAPSULE_BG     @CAPSULE_BG@ · hover @CAPSULE_BG_HOVER@ · activa @CAPSULE_BG_ACTIVE@
+ *   RADIOS         cápsula @RADIUS_CAPSULE@ · menú @RADIUS_MENU@ · baldosa @RADIUS_TILE@ · elemento @RADIUS_ITEM@
+ *   REJILLA        @SPACE_XS@ · @SPACE_S@ · @SPACE_M@ · @SPACE_L@
+ *   TIPOGRAFÍA     Adwaita Sans (fuente del sistema), grosor fuerte @WEIGHT_STRONG@
+ */
+
+@import url("resource:///org/gnome/shell/theme/gnome-shell-dark.css");
+
+/* ---------- Barra superior ---------- */
+
+/* Blur my Shell pone el fondo desenfocado de la barra; el tema no le añade color */
+#panel {
+  font-weight: @WEIGHT_STRONG@;
+}
+
+/* Cápsulas a la derecha (estado) y en el centro (reloj) */
+#panel #panelRight .panel-button,
+#panel #panelCenter .panel-button {
+  border-radius: @RADIUS_CAPSULE@;
+  background-color: @CAPSULE_BG@;
+  border: @SPACE_XS@ solid transparent;
+  -natural-hpadding: @SPACE_M@;
+  -minimum-hpadding: @SPACE_S@;
+}
+
+#panel #panelRight .panel-button:hover,
+#panel #panelCenter .panel-button:hover {
+  background-color: @CAPSULE_BG_HOVER@;
+}
+
+#panel #panelRight .panel-button:active,
+#panel #panelRight .panel-button:checked,
+#panel #panelCenter .panel-button:active,
+#panel #panelCenter .panel-button:checked {
+  background-color: @CAPSULE_BG_ACTIVE@;
+}
+
+/* ---------- Menús ---------- */
+
+.popup-menu-content {
+  padding: @SPACE_S@;
+  border-radius: @RADIUS_MENU@;
+  background-color: @SURFACE@;
+  border: @BORDER@;
+  box-shadow: @SHADOW@;
+}
+
+.popup-menu-item {
+  border-radius: @RADIUS_ITEM@;
+}
+
+/* ---------- Control Center (Quick Settings) ---------- */
+
+.quick-settings {
+  padding: @SPACE_L@;
+  border-radius: @RADIUS_MENU@;
+}
+
+.quick-settings-grid {
+  spacing-rows: @SPACE_M@;
+  spacing-columns: @SPACE_M@;
+}
+
+/* Baldosas: rectángulo redondeado (macOS) en lugar de píldora */
+.quick-toggle,
+.quick-toggle-has-menu {
+  border-radius: @RADIUS_TILE@;
+}
+
+.quick-toggle-has-menu .quick-toggle:ltr {
+  border-radius: @RADIUS_TILE@ 0 0 @RADIUS_TILE@;
+}
+
+.quick-toggle-has-menu .quick-toggle:rtl {
+  border-radius: 0 @RADIUS_TILE@ @RADIUS_TILE@ 0;
+}
+
+.quick-toggle-has-menu .quick-toggle:ltr:last-child,
+.quick-toggle-has-menu .quick-toggle:rtl:last-child {
+  border-radius: @RADIUS_TILE@;
+}
+
+.quick-toggle-has-menu .quick-toggle-menu-button:ltr {
+  border-radius: 0 @RADIUS_TILE@ @RADIUS_TILE@ 0;
+}
+
+.quick-toggle-has-menu .quick-toggle-menu-button:rtl {
+  border-radius: @RADIUS_TILE@ 0 0 @RADIUS_TILE@;
+}
+
+/* Submenús que se despliegan dentro del Control Center */
+.quick-toggle-menu {
+  border-radius: @RADIUS_TILE@;
+  margin: @SPACE_M@ 0 0;
+}
+
+/* ---------- Calendario y notificaciones ---------- */
+
+.message,
+.events-button,
+.world-clocks-button,
+.weather-button {
+  border-radius: @RADIUS_TILE@;
+}
+
+.notification-banner {
+  border-radius: @RADIUS_MENU@;
+  border: @BORDER@;
+  box-shadow: @SHADOW@;
+}
+
+/* ---------- OSD, selector de ventanas y diálogos ---------- */
+
+.osd-window,
+.switcher-list,
+.workspace-switcher,
+.resize-popup {
+  background-color: @SURFACE@;
+  border: @BORDER@;
+}
+
+.modal-dialog {
+  border-radius: @RADIUS_MENU@;
+  border: @BORDER@;
+}
+
+/* ---------- Barra y dock con desenfoque (Blur my Shell, variantes en config/visual/glass/) ---------- */
+
+/* Legibilidad del reloj y los iconos sobre fondos claros: sombra mínima */
+#panel .panel-button {
+  text-shadow: @PANEL_TEXT_SHADOW@;
+  icon-shadow: @PANEL_TEXT_SHADOW@;
+}
+
+/* Borde fino claro del dock; el radio (24 px) es el de Dash to Dock y coincide con el del desenfoque */
+#dashtodockContainer #dash .dash-background {
+  border: @DOCK_BORDER@;
+}

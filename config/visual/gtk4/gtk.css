@@ -1,0 +1,56 @@
+/* ~/.config/gtk-4.0/gtk.css mínimo (fase 3, paso 5). GTK 4.22 / libadwaita 1.9.
+ *
+ * Solo dos cosas, sin redefinir ningún color del sistema (@define-color, :root o variables),
+ * para que el acento y el cambio claro/oscuro de libadwaita sigan funcionando:
+ *   1. Botones de ventana estilo semáforo (CSS puro, sin imágenes).
+ *   2. Un leve tono de acento en la barra lateral (usa las variables de libadwaita).
+ * Sustituye a la copia completa del GTK4 de MacTahoe (272 KB, 125 colores redefinidos).
+ */
+
+/* ---------- 1. Semáforos ---------- */
+
+windowcontrols > button {
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0 1px;
+  background: none;
+  box-shadow: none;
+}
+
+windowcontrols > button > image {
+  min-width: 12px;
+  min-height: 12px;
+  padding: 0;
+  border-radius: 100%;
+  -gtk-icon-size: 8px;
+  color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+windowcontrols > button.close > image    { background-color: #ff5f57; }
+windowcontrols > button.minimize > image { background-color: #febc2e; }
+windowcontrols > button.maximize > image { background-color: #28c840; }
+
+/* El símbolo solo aparece al pasar el ratón por encima, como en macOS */
+windowcontrols > button:hover > image,
+windowcontrols > button:active > image {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+windowcontrols > button:hover,
+windowcontrols > button:active {
+  background: none;
+}
+
+/* Ventana sin foco: los tres en gris neutro */
+window:backdrop windowcontrols > button > image {
+  background-color: rgba(128, 128, 128, 0.35);
+}
+
+/* ---------- 2. Barra lateral con un leve tono de acento ---------- */
+
+.sidebar-pane,
+.navigation-sidebar {
+  background-color: color-mix(in srgb, var(--sidebar-bg-color) 96%, var(--accent-bg-color));
+}

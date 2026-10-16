@@ -1,0 +1,14 @@
+diff -ruN a/extension.js b/extension.js
+--- a/extension.js	2026-09-27 16:20:33.000000000 -0500
++++ b/extension.js	2026-10-15 09:57:22.865387444 -0500
+@@ -134,7 +134,9 @@
+             this.menu?.toggle();
+             return Clutter.EVENT_STOP;
+         }
+-        return super.vfunc_event(event);
++        // Parche local (dotfiles): St.Widget no implementa vfunc_event en GNOME 50; llamarlo lanza
++        // una excepción que, durante pushModal al abrir el menú, deja la interfaz bloqueada.
++        return Clutter.EVENT_PROPAGATE;
+     }
+ 
+     _aboutThisDistro() {

@@ -1,0 +1,83 @@
+diff -ruN a/extension.js b/extension.js
+--- a/extension.js	2025-11-21 05:48:15.000000000 -0500
++++ b/extension.js	2026-10-15 09:04:22.515692653 -0500
+@@ -286,6 +286,10 @@
+     }
+ 
+     addSettingsItem() {
++        /* Parche local (dotfiles): en el menú rápido no se añaden "Settings" ni "Reload";
++         * los monitores se detectan solos (monitors-changed) */
++        if (this.settings.get_int('button-location') !== 0)
++            return;
+         const settingsItem = new PopupMenu.PopupMenuItem(_('Settings'));
+         settingsItem.connect('activate', () => {
+             this.openPreferences();
+@@ -322,7 +326,7 @@
+             allslider.connect('slider-change', onAllSliderChange);
+             if (this.settings.get_boolean('show-sliders-in-submenu'))
+                 allslider.menuEnabled = true
+-            allslider.menu.setHeader('display-brightness-symbolic', 'Brightness');
++            allslider.menu.setHeader('display-brightness-symbolic', GLib.dgettext('gnome-shell', 'Brightness')); /* parche local: traducido */
+         }
+         mainMenuButton.addMenuItem(allslider);
+ 
+@@ -447,7 +451,10 @@
+                         Slider->Parent(St.Bin)->Parent(St.BoxLayout)
+                     */
+                     const _box = item.slider.get_parent().get_parent();
+-                    if (this.settings.get_boolean('show-display-name'))
++                    /* Parche local: con submenú, el deslizador maestro va sin etiqueta ("Todos");
++                     * los nombres de cada monitor siguen dentro del submenú */
++                    if (this.settings.get_boolean('show-display-name') &&
++                        !this.settings.get_boolean('show-sliders-in-submenu'))
+                         _box.insert_child_at_index(item.NameContainer, 1);
+ 
+                     _grid.insert_child_at_index(item, this.settings.get_double('position-system-menu'));
+diff -ruN a/indicator.js b/indicator.js
+--- a/indicator.js	2025-11-21 05:23:09.000000000 -0500
++++ b/indicator.js	2026-10-15 08:47:25.833373555 -0500
+@@ -160,6 +160,19 @@
+         });
+         this.connect('destroy', this._onDestroy.bind(this));
+         this._settings = settings;
++
++        /* Parche local (dotfiles): oculta el deslizador de brillo nativo de GNOME (en GNOME 50 es el
++         * brillo SDR dentro del HDR, no el brillo físico) mientras esta extensión vive en el menú rápido */
++        this._nativeHidden = [];
++        const native = Main.panel.statusArea.quickSettings?._brightness ?? null;
++        native?.quickSettingsItems.forEach(item => {
++            item.hide();
++            const id = item.connect('notify::visible', () => {
++                if (item.visible)
++                    item.hide();
++            });
++            this._nativeHidden.push([item, id]);
++        });
+     }
+ 
+     indicatorVisibility(visible) {
+@@ -193,6 +206,15 @@
+ 
+     _onDestroy() {
+         brightnessLog(this._settings, 'Destroy all quick settings items');
++        /* Parche local: devuelve el deslizador nativo a su estado normal */
++        this._nativeHidden.forEach(([item, id]) => {
++            item.disconnect(id);
++            if (item._sync)
++                item._sync();
++            else
++                item.show();
++        });
++        this._nativeHidden = [];
+         this.quickSettingsItems.forEach(item => item.destroy());
+     }
+ });
+@@ -316,7 +338,7 @@
+         this.NameContainer = new St.Label({
+             y_align: Clutter.ActorAlign.CENTER,
+             text: this.display_name,
+-            style: 'font-size: 10px; font-weight: normal;',
++            style: 'font-size: 12px; font-weight: normal; min-width: 7.5em;', /* parche local: ancho fijo para alinear los deslizadores */
+             style_class: 'display-brightness-ddcutil-monitor-name-system-menu',
+         });
+         if (this.settings.get_boolean('show-display-name'))

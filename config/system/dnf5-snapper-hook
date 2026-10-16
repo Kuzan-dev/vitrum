@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Hook de libdnf5-plugin-actions: crea snapshots pre/post de Snapper en cada
+# transacción de dnf5. Se instala en /usr/local/libexec/dnf5-snapper-hook.
+#
+#   dnf5-snapper-hook pre  <pid-dnf>
+#   dnf5-snapper-hook post <pid-dnf> [numero-pre]
+#
+# Nunca debe bloquear dnf: siempre sale con 0 y, si snapper falla, solo
+# escribe un aviso en el log de dnf ("log.WARNING=..." en stdout).
+# En "pre" imprime "tmp.snapper_pre=<n>", que el plugin pasa luego a "post".
+set -uo pipefail
+
+CONFIG="root"
+mode="${1:-}"
+pid="${2:-}"
+pre_num="${3:-}"
+
+# Línea de comandos de dnf como descripción del snapshot (máx. 120 caracteres)
+desc="dnf"
+if [[ -n "$pid" && -r "/proc/$pid/cmdline" ]]; then
+  desc="$(tr '\0' ' ' < "/proc/$pid/cmdline" | sed 's/ *$//')"
+fi
+desc="${desc:0:120}"
+
+case "$mode" in
+  pre)
+    if num="$(snapper -c "$CONFIG" create -t pre -c number -p -d "$desc" 2>&1)"; then
+      echo "tmp.snapper_pre=$num"
+    else
+      echo "tmp.snapper_pre="
+      echo "log.WARNING=snapper pre falló: ${num//$'\n'/ }"
+    fi
+    ;;
+  post)
+    if [[ "$pre_num" =~ ^[0-9]+$ ]]; then
+      if ! out="$(snapper -c "$CONFIG" create -t post --pre-number "$pre_num" -c number -d "$desc" 2>&1)"; then
+        echo "log.WARNING=snapper post falló: ${out//$'\n'/ }"
+      fi
+    else
+      echo "log.WARNING=snapper post omitido: no hay snapshot pre"
+    fi
+    ;;
+  *)
+    echo "log.WARNING=dnf5-snapper-hook: modo desconocido '$mode'"
+    ;;
+esac
+exit 0

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Waywallen (daemon)
+Comment=Fondo animado (Waywallen, daemon sin UI)
+Exec=flatpak run --command=waywallen org.waywallen.waywallen --no-ui --display-backend gnome-shell
+X-GNOME-Autostart-enabled=true
+NoDisplay=true

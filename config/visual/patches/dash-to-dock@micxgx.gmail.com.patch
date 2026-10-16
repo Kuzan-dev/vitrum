@@ -1,0 +1,10 @@
+--- a/docking.js
++++ b/docking.js
+@@ -771,5 +771,6 @@
+         } else {
+             this.autohideEnabled = settings.autohide;
+-            this.intellihideEnabled = settings.intellihide;
++            // Parche local: ocultamiento inteligente solo en el monitor principal
++            this.intellihideEnabled = settings.intellihide && this._isPrimaryMonitor();
+         }
+ 

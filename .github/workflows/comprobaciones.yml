@@ -1,0 +1,17 @@
+# Comprobaciones en cada push y pull request: shellcheck de los scripts y escaneo de secretos/datos
+# personales con patrones genéricos (CI no tiene config/local.env; eso lo cubre el hook de pre-commit).
+name: comprobaciones
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  comprobaciones:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          git ls-files -z '*.sh' install.sh tools/hooks/* | xargs -0 shellcheck -S warning
+      - name: escaneo de secretos y datos personales
+        run: python3 tools/escanear-datos.py --arbol --generico

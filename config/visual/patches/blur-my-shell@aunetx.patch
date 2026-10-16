@@ -1,0 +1,143 @@
+diff -ruN a/components/dash_to_dock.js b/components/dash_to_dock.js
+--- a/components/dash_to_dock.js	2026-10-05 09:07:49.000000000 -0500
++++ b/components/dash_to_dock.js	2026-10-15 20:54:47.648884863 -0500
+@@ -1,3 +1,5 @@
++import Clutter from 'gi://Clutter';
++import GLib from 'gi://GLib';
+ import Meta from 'gi://Meta';
+ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+ import * as Signals from 'resource:///org/gnome/shell/misc/signals.js';
+@@ -8,6 +10,88 @@
+ import { Pipeline } from '../conveniences/pipeline.js';
+ import { DummyPipeline } from '../conveniences/dummy_pipeline.js';
+ 
++// Parche local (dotfiles): el desenfoque estático solo ve el fondo de pantalla. Se añaden clones
++// de las ventanas visibles que tocan este monitor (en orden de apilamiento), dentro de un contenedor
++// del tamaño del monitor que recorta lo que sobresale: un clon fuera de esos límites agrandaba el
++// fondo desenfocado y el desenfoque salía nítido o desplazado (dock sin cristal cuando había una
++// ventana en el otro monitor). Así el desenfoque muestra lo que hay realmente detrás y conserva las
++// esquinas del efecto 'corner'. Se clonan
++// ventanas sueltas (como la vista general), no global.window_group (eso colgaba la sesión), y
++// nunca ventanas a pantalla completa (un clon impediría el "unredirect" de los juegos).
++class GGWindowClones {
++    constructor(container, monitor) {
++        this._container = container;
++        this._monitor = monitor;
++        this._clones = [];
++        this._ids = [];
++        this._idle = 0;
++        this._holder = new Clutter.Actor({
++            x: 0, y: 0, width: monitor.width, height: monitor.height, clip_to_allocation: true,
++        });
++        container.add_child(this._holder);
++        const watch = (obj, signal) => this._ids.push([obj, obj.connect(signal, () => this._queue())]);
++        watch(global.display, 'window-entered-monitor');
++        watch(global.display, 'window-left-monitor');
++        watch(global.display, 'grab-op-end');
++        watch(global.display, 'restacked');
++        watch(global.display, 'in-fullscreen-changed');
++        watch(global.workspace_manager, 'active-workspace-changed');
++        watch(global.window_manager, 'minimize');
++        watch(global.window_manager, 'unminimize');
++        watch(global.window_manager, 'map');
++        watch(global.window_manager, 'destroy');
++        watch(global.window_manager, 'size-changed');
++        this._rebuild();
++    }
++
++    _queue() {
++        if (this._idle)
++            return;
++        this._idle = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
++            this._idle = 0;
++            this._rebuild();
++            return GLib.SOURCE_REMOVE;
++        });
++    }
++
++    _rebuild() {
++        this._clones.forEach(clone => clone.destroy());
++        this._clones = [];
++        const workspace = global.workspace_manager.get_active_workspace();
++        for (const actor of global.get_window_actors()) {
++            const win = actor.get_meta_window();
++            if (!win || win.minimized || win.is_fullscreen() ||
++                !win.located_on_workspace(workspace) ||
++                !win.showing_on_its_workspace())
++                continue;
++            const r = win.get_frame_rect();
++            const m = this._monitor;
++            if (r.x >= m.x + m.width || r.x + r.width <= m.x ||
++                r.y >= m.y + m.height || r.y + r.height <= m.y)
++                continue;
++            const clone = new Clutter.Clone({source: actor});
++            clone.add_constraint(new Clutter.BindConstraint({
++                source: actor, coordinate: Clutter.BindCoordinate.X, offset: -this._monitor.x,
++            }));
++            clone.add_constraint(new Clutter.BindConstraint({
++                source: actor, coordinate: Clutter.BindCoordinate.Y, offset: -this._monitor.y,
++            }));
++            this._holder.add_child(clone);
++            this._clones.push(clone);
++        }
++        this._container.queue_redraw();
++    }
++
++    destroy() {
++        this._ids.forEach(([obj, id]) => obj.disconnect(id));
++        this._ids = [];
++        if (this._idle)
++            GLib.source_remove(this._idle);
++        this._idle = 0;
++        this._clones = [];
++    }
++}
++
+ const DASH_STYLES = [
+     "transparent-dash",
+     "light-dash",
+@@ -224,6 +308,10 @@
+             this.background.y = dash_box.background_y + inset;
+ 
+             this.background.set_clip(clip_x, clip_y, clip_w, clip_h);
++            // Parche local: medición (solo con la opción debug de Blur my Shell activada)
++            this._log(`geom dash_background=${this.dash_background.width}x${this.dash_background.height} ` +
++                `clip=${clip_x},${clip_y},${clip_w}x${clip_h} inset=${inset} ` +
++                `radius_css=${this.dash_background.get_theme_node().get_border_radius(0)}`);
+         } else {
+             this.background.width = this.dash_background.width;
+             this.background.height = this.dash_background.height;
+@@ -506,6 +594,11 @@
+                 background_group, 'bms-dash-blurred-widget'
+             );
+             bg_manager = bg_manager_list[0];
++
++            // Parche local (dotfiles): ventanas visibles bajo el desenfoque (ver GGWindowClones)
++            const window_clones = new GGWindowClones(background, monitor);
++            background.connect('destroy', () => window_clones.destroy());
++
+         }
+         else {
+             const pipeline = new DummyPipeline(
+diff -ruN a/components/panel.js b/components/panel.js
+--- a/components/panel.js	2026-10-09 03:20:48.000000000 -0500
++++ b/components/panel.js	2026-10-15 20:54:28.705925816 -0500
+@@ -377,6 +377,18 @@
+                 return;
+             }
+ 
++            // Parche local (dotfiles): al iniciar sesión la barra puede crearse antes de quedar
++            // asignada a su monitor y el fondo desenfocado toma el tamaño de otro (1920 px en un
++            // monitor de 2560: barra cortada). Si no coincide, se rehace el desenfoque (máx. 3 veces).
++            if ((background.width !== monitor.width || background.height !== monitor.height) &&
++                (this._gg_monitor_resets ?? 0) < 3) {
++                this._gg_monitor_resets = (this._gg_monitor_resets ?? 0) + 1;
++                this._warn(`static blur sized ${background.width}x${background.height} for a ` +
++                    `${monitor.width}x${monitor.height} monitor, resetting`);
++                this.reset();
++                return;
++            }
++
+             let [p_x, p_y] = panel_box.get_position();
+             let [p_p_x, p_p_y] = panel_box.get_parent().get_position();
+ 

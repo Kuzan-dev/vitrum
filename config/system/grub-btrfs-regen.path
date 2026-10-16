@@ -1,0 +1,11 @@
+[Unit]
+Description=Vigilar /.snapshots para regenerar el submenú de GRUB (grub-btrfs)
+Documentation=man:grub-btrfs(8)
+
+[Path]
+# Se activa al crear o borrar entradas en /.snapshots (snapper create/delete/cleanup)
+PathChanged=/.snapshots
+Unit=grub-btrfs-regen.service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,32 @@
+# rEFInd — capa por encima de GRUB (fase 1.5). Se instala en /boot/efi/EFI/refind/refind.conf.
+# Solo dos entradas manuales, identificadas por PARTUUID (no dependen del orden de discos):
+#   Fedora  → shim + GRUB de Fedora (conserva el submenú "Fedora snapshots" de grub-btrfs)
+#   Windows → Windows Boot Manager en la ESP del otro disco
+# Sin autodetección (scanfor manual): rEFInd no arranca kernels directamente ni muestra
+# duplicados (BOOTX64.EFI, fallback, etc.).
+
+# Tema rEFInd-lite con fondo negro liso propio (commit fijado en scripts/system/08-refind.sh;
+# rEFInd-minimal sigue en themes/ como respaldo). Iconos de Fedora y Windows de rEFInd-lite (claros).
+# Va primero: los ajustes de abajo tienen prioridad sobre los del tema.
+include themes/rEFInd-lite/theme.conf
+
+timeout 5
+default_selection "Fedora"
+scanfor manual
+use_nvram false
+
+# Herramientas: apagar, reiniciar y entrar en la configuración del firmware.
+# (El tema trae shutdown y reset; firmware usa el icono por defecto de icons/.)
+showtools shutdown,reboot,firmware
+
+menuentry "Fedora" {
+    icon   /EFI/refind/themes/rEFInd-lite/icons/os_fedora.png
+    volume @FEDORA_ESP_PARTUUID@
+    loader /EFI/fedora/shimx64.efi
+}
+
+menuentry "Windows" {
+    icon   /EFI/refind/themes/rEFInd-lite/icons/os_win.png
+    volume @WINDOWS_ESP_PARTUUID@
+    loader /EFI/Microsoft/Boot/bootmgfw.efi
+}

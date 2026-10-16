@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# El mismo escaneo sobre el mensaje del commit (correo, usuarios, IP…)
+exec python3 -I "$(git rev-parse --show-toplevel)/tools/escanear-datos.py" --mensaje "$1"

@@ -1,0 +1,3 @@
+# Variante activa de barra y dock. Una de: sutil (recomendada) | media | cristal
+# Para cambiar: editar esta línea y ejecutar  sudo ~/dotfiles/scripts/visual.sh <usuario> glass
+sutil

@@ -1,0 +1,6 @@
+# Snapshots pre/post de Snapper en cada transacción de dnf5.
+# Instalado en /etc/dnf/libdnf5-plugins/actions.d/snapper.actions
+# raise_error=0: si el hook falla, dnf solo lo registra y continúa.
+# enabled=host-only: no se ejecuta con --installroot.
+pre_transaction:::enabled=host-only raise_error=0:/usr/local/libexec/dnf5-snapper-hook pre ${pid}
+post_transaction:::enabled=host-only raise_error=0:/usr/local/libexec/dnf5-snapper-hook post ${pid} ${tmp.snapper_pre}

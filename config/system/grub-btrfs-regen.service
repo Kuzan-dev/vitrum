@@ -1,0 +1,11 @@
+[Unit]
+Description=Regenerar el submenú de snapshots de GRUB (grub-btrfs, con debounce)
+Documentation=man:grub-btrfs(8)
+RequiresMountsFor=/.snapshots /boot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/grub-btrfs-regen-auto
+# Baja prioridad: no compite con dnf ni con el escritorio
+Nice=10
+IOSchedulingClass=idle

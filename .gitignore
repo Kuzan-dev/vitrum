@@ -1,0 +1,7 @@
+# Volcados completos de dconf: locales, pueden contener datos personales
+backups/*
+!backups/.gitkeep
+
+# Valores propios del equipo (PARTUUID, usuarios, series, correo…): nunca en el repo.
+# Plantilla con valores ficticios: config/local.env.example
+config/local.env
